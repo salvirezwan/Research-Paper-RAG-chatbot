@@ -4,9 +4,29 @@ Runs after the generator to ensure every response has proper citations.
 """
 
 from typing import List, Dict, Any
+from urllib.parse import quote
 
 from backend.rag.langgraph.state import GraphState
+from backend.core.config import settings
 from backend.core.logging import logger
+
+_VIEWER_BASE = f"http://localhost:{settings.STREAMLIT_PORT}/viewer"
+
+
+def _build_viewer_link(
+    upload_id: str = "",
+    page_number: int | None = None,
+    section_id: str = "",
+) -> str:
+    """Build a local viewer URL with optional page & section params."""
+    if not upload_id:
+        return ""
+    params = [f"doc={upload_id}"]
+    if page_number is not None and page_number >= 1:
+        params.append(f"page={page_number}")
+    if section_id:
+        params.append(f"section={quote(section_id)}")
+    return f"{_VIEWER_BASE}?{'&'.join(params)}"
 
 
 def citation_node(state: GraphState) -> GraphState:
@@ -62,23 +82,35 @@ def _build_citations_from_chunks(
         year = metadata.get("publication_year", "")
         arxiv_id = metadata.get("arxiv_id", "")
         doi = metadata.get("doi", "")
+        upload_id = metadata.get("upload_id", "")
+        page_number = metadata.get("page_number")
+        section_id = metadata.get("section_id", "")
 
-        citation_text = f"[{len(citations) + 1}]"
+        citation_label = f"[{len(citations) + 1}]"
         if paper_title and paper_title != "Untitled":
-            citation_text += f" {paper_title}"
+            citation_label += f" {paper_title}"
         if authors and authors != "Unknown authors":
-            citation_text += f" — {authors}"
+            citation_label += f" — {authors}"
         if year:
-            citation_text += f" ({year})"
+            citation_label += f" ({year})"
 
-        if arxiv_id:
-            link = f"https://arxiv.org/abs/{arxiv_id}"
-            citation = f"[{citation_text}]({link})"
+        # Primary link: local viewer with page navigation
+        viewer_link = _build_viewer_link(upload_id, page_number, section_id)
+
+        if viewer_link:
+            citation = f"[{citation_label}]({viewer_link})"
+        elif arxiv_id:
+            citation = f"[{citation_label}](https://arxiv.org/abs/{arxiv_id})"
         elif doi:
-            link = f"https://doi.org/{doi}"
-            citation = f"[{citation_text}]({link})"
+            citation = f"[{citation_label}](https://doi.org/{doi})"
         else:
-            citation = citation_text
+            citation = citation_label
+
+        # Secondary external link
+        if viewer_link and arxiv_id:
+            citation += f"  ↗ [arXiv:{arxiv_id}](https://arxiv.org/abs/{arxiv_id})"
+        elif viewer_link and doi:
+            citation += f"  ↗ [DOI](https://doi.org/{doi})"
 
         citations.append(citation)
 
@@ -95,3 +127,4 @@ def _format_sources_block(citations: List[str]) -> str:
         lines.append(f"- {citation}")
 
     return "\n".join(lines)
+

@@ -264,7 +264,7 @@ with st.sidebar:
         arxiv_input = st.text_input(
             "arXiv ID", placeholder="e.g. 2301.00001", key="arxiv_id_input"
         )
-        if st.button("Fetch Metadata", use_container_width=True):
+        if st.button("Fetch Paper", use_container_width=True):
             if not arxiv_input.strip():
                 st.warning("Enter an arXiv ID.")
             else:

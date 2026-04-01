@@ -4,13 +4,16 @@ call Groq LLM, and produce a cited research answer.
 """
 
 from typing import List, Dict, Any
+from urllib.parse import quote
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from backend.rag.langgraph.state import GraphState
 from backend.rag.llm_client import get_chat_model
+from backend.core.config import settings
 from backend.core.logging import logger
 
+_VIEWER_BASE = f"http://localhost:{settings.STREAMLIT_PORT}/viewer"
 
 _SYSTEM_PROMPT = """You are an expert academic research assistant.
 
@@ -23,6 +26,22 @@ Your role is to:
 
 Always cite your sources using the citation numbers provided in the context.
 When multiple sources support a point, cite all of them (e.g., [1][3])."""
+
+
+def _build_viewer_link(
+    upload_id: str = "",
+    page_number: int | None = None,
+    section_id: str = "",
+) -> str:
+    """Build a local viewer URL with optional page & section params."""
+    if not upload_id:
+        return ""
+    params = [f"doc={upload_id}"]
+    if page_number is not None and page_number >= 1:
+        params.append(f"page={page_number}")
+    if section_id:
+        params.append(f"section={quote(section_id)}")
+    return f"{_VIEWER_BASE}?{'&'.join(params)}"
 
 
 def generator_node(state: GraphState) -> GraphState:
@@ -50,34 +69,49 @@ def generator_node(state: GraphState) -> GraphState:
         arxiv_id = metadata.get("arxiv_id", "")
         doi = metadata.get("doi", "")
         section_id = metadata.get("section_id", "")
+        upload_id = metadata.get("upload_id", "")
+        page_number = metadata.get("page_number")
 
-        # Build citation string
-        citation_text = f"[{i}]"
+        # Build citation label
+        citation_label = f"[{i}]"
         if paper_title and paper_title != "Untitled":
-            citation_text += f" {paper_title}"
+            citation_label += f" {paper_title}"
         if authors and authors != "Unknown authors":
-            citation_text += f" — {authors}"
+            citation_label += f" — {authors}"
         if year:
-            citation_text += f" ({year})"
+            citation_label += f" ({year})"
         if section_id:
-            citation_text += f", §{section_id}"
+            citation_label += f", §{section_id}"
 
-        # Build reference link if available
-        if arxiv_id:
-            citation_link = f"https://arxiv.org/abs/{arxiv_id}"
-            citation_full = f"[{citation_text}]({citation_link})"
+        # Build local viewer link (primary — opens PDF at the right page)
+        viewer_link = _build_viewer_link(upload_id, page_number, section_id)
+
+        if viewer_link:
+            citation_full = f"[{citation_label}]({viewer_link})"
+        elif arxiv_id:
+            citation_full = f"[{citation_label}](https://arxiv.org/abs/{arxiv_id})"
         elif doi:
-            citation_link = f"https://doi.org/{doi}"
-            citation_full = f"[{citation_text}]({citation_link})"
+            citation_full = f"[{citation_label}](https://doi.org/{doi})"
         else:
-            citation_full = citation_text
+            citation_full = citation_label
+
+        # Add external reference link as secondary info
+        external_ref = ""
+        if viewer_link and arxiv_id:
+            external_ref = f"  ↗ [arXiv:{arxiv_id}](https://arxiv.org/abs/{arxiv_id})"
+        elif viewer_link and doi:
+            external_ref = f"  ↗ [DOI](https://doi.org/{doi})"
+
+        if external_ref:
+            citation_full += external_ref
 
         logger.debug(
             f"[GENERATOR] Citation [{i}]: title='{paper_title}', "
-            f"authors='{authors}', source='{source}'"
+            f"authors='{authors}', source='{source}', "
+            f"page={page_number}, section='{section_id}'"
         )
 
-        context_parts.append(f"{citation_text}\n{chunk_text}")
+        context_parts.append(f"[{i}]\n{chunk_text}")
         citations.append(citation_full)
 
     context = "\n\n".join(context_parts) if context_parts else "No relevant documents found."
@@ -120,3 +154,4 @@ def generator_node(state: GraphState) -> GraphState:
     )
 
     return {**state, "final_answer": final_answer, "citations": citations}
+
