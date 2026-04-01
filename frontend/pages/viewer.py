@@ -45,8 +45,75 @@ section_id = unquote(section_raw) if section_raw else None
 st.title("📄 Document Viewer")
 
 if not paper_id:
-    st.error("❌ No document ID provided. Use a citation link from the chat.")
-    st.info("💡 Citation links appear under **Sources** in every assistant response.")
+    # ── Paper browser: let users pick a paper to view ──────────────────────────
+    st.info("Select a paper below to view its PDF, or use a citation link from the chat.")
+
+    try:
+        papers_resp = requests.get(f"{BACKEND_URL}/api/v1/papers", timeout=10)
+        if papers_resp.status_code == 200:
+            papers = papers_resp.json().get("papers", [])
+        else:
+            papers = []
+    except Exception:
+        papers = []
+        st.warning("⚠️ Could not connect to the backend. Is it running?")
+
+    if not papers:
+        st.write("No papers in the library yet. Upload a PDF or fetch from arXiv on the main page.")
+        st.stop()
+
+    # Show papers as cards
+    for paper in papers:
+        pid = paper.get("paper_id", "")
+        title = paper.get("title") or paper.get("filename", "Untitled")
+        authors = paper.get("authors") or []
+        status = paper.get("status", "unknown")
+        source = paper.get("source", "")
+        year = paper.get("publication_year", "")
+        arxiv_id = paper.get("arxiv_id", "")
+        chunk_count = paper.get("chunk_count", 0)
+
+        with st.container():
+            col_info, col_btn = st.columns([4, 1])
+
+            with col_info:
+                st.markdown(f"**{title}**")
+                meta_parts = []
+                if authors:
+                    auth_str = ", ".join(authors) if isinstance(authors, list) else str(authors)
+                    meta_parts.append(auth_str)
+                if year:
+                    meta_parts.append(f"({year})")
+                if meta_parts:
+                    st.caption(" ".join(meta_parts))
+                tags = []
+                if source:
+                    tags.append(f"`{source}`")
+                if status:
+                    tags.append(f"`{status}`")
+                if chunk_count:
+                    tags.append(f"{chunk_count} chunks")
+                if arxiv_id:
+                    tags.append(f"arXiv: {arxiv_id}")
+                if tags:
+                    st.caption(" · ".join(tags))
+
+            with col_btn:
+                if status == "indexed":
+                    if st.button("📄 View", key=f"view_{pid}", use_container_width=True):
+                        st.query_params["doc"] = pid
+                        st.rerun()
+                else:
+                    st.button(
+                        "📄 View",
+                        key=f"view_{pid}",
+                        use_container_width=True,
+                        disabled=True,
+                        help=f"Paper status: {status} — not viewable yet",
+                    )
+
+            st.divider()
+
     st.stop()
 
 pdf_url = f"{BACKEND_URL}/api/v1/uploads/{paper_id}/view"

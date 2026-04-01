@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # Groq LLM
     GROQ_API_KEY: str = Field(default="")
-    GROQ_MODEL: str = Field(default="llama-3.1-70b-versatile")
+    GROQ_MODEL: str = Field(default="llama-3.3-70b-versatile")
     LLM_TEMPERATURE: float = Field(default=0.0)
 
     # Embeddings (local, sentence-transformers)
