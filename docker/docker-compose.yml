@@ -1,0 +1,74 @@
+services:
+
+  # ── FastAPI backend ──────────────────────────────────────────────────────────
+  backend:
+    container_name: rag_backend
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/app/backend          # live-reload in dev
+      - ../uploads:/app/uploads          # persisted uploaded PDFs
+      - chroma_data:/app/data/chroma_db  # persisted ChromaDB vectors
+    env_file:
+      - ../.env
+    environment:
+      - APP_ENV=development
+      - MONGODB_URL=mongodb://mongodb:27017
+      - CHROMA_PERSIST_PATH=/app/data/chroma_db
+      - UPLOAD_DIR=/app/uploads/documents
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Streamlit frontend ───────────────────────────────────────────────────────
+  frontend:
+    container_name: rag_frontend
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../frontend:/app/frontend        # live-reload in dev
+    environment:
+      # The frontend calls the backend by Docker service name
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── MongoDB ──────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: rag_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=academic_research_rag
+    command: >
+      mongod
+      --quiet
+      --setParameter logComponentVerbosity={verbosity:0}
+      --setParameter logLevel=1
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  chroma_data:

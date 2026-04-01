@@ -1,0 +1,24 @@
+# =============================================================
+# Frontend Dockerfile — Streamlit + uv
+# =============================================================
+FROM python:3.11-slim
+
+RUN pip install uv
+
+WORKDIR /app
+
+# Copy dependency manifest first to leverage layer caching
+COPY pyproject.toml ./
+
+# Install all non-dev dependencies
+RUN uv sync --no-dev --no-cache
+
+# Copy frontend source
+COPY frontend ./frontend
+
+EXPOSE 8501
+
+CMD ["uv", "run", "streamlit", "run", "frontend/app.py", \
+     "--server.address=0.0.0.0", \
+     "--server.port=8501", \
+     "--server.headless=true"]

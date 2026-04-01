@@ -1,0 +1,75 @@
+[project]
+name = "academic-research-rag"
+version = "0.1.0"
+description = "AI-powered agentic RAG system for Students & Researchers"
+authors = [{ name = "Your Name" }]
+requires-python = ">=3.11"
+
+dependencies = [
+    # ── Web framework ──────────────────────────────────────────────────────────
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "starlette>=0.41.0",
+    "python-multipart>=0.0.12",   # required by FastAPI for file/form uploads
+    "sse-starlette>=2.1.0",       # Server-Sent Events for streaming chat
+
+    # ── Validation & config ────────────────────────────────────────────────────
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",   # reads .env into Settings
+
+    # ── Database ───────────────────────────────────────────────────────────────
+    "motor>=3.6.0",               # async MongoDB driver
+    "pymongo>=4.10.0",            # sync MongoDB driver (errors, types)
+
+    # ── Vector store ───────────────────────────────────────────────────────────
+    "chromadb>=0.5.0",            # local persistent ChromaDB
+
+    # ── Embeddings ─────────────────────────────────────────────────────────────
+    "sentence-transformers>=3.3.0",  # BAAI/bge-base-en-v1.5 embeddings
+
+    # ── LLM / LangChain / LangGraph ───────────────────────────────────────────
+    "langchain-core>=0.3.0",
+    "langchain-groq>=0.2.0",      # Groq LLM via LangChain
+    "langgraph>=0.2.0",           # StateGraph RAG pipeline
+
+    # ── PDF parsing ────────────────────────────────────────────────────────────
+    "pymupdf>=1.24.0",            # primary PDF parser (imports as `fitz`)
+    "unstructured[pdf]>=0.15.0",  # fallback PDF parser
+
+    # ── HTTP clients ───────────────────────────────────────────────────────────
+    "httpx>=0.27.0",              # async HTTP — arXiv & Semantic Scholar APIs
+
+    # ── Frontend ───────────────────────────────────────────────────────────────
+    "streamlit>=1.40.0",
+    "requests>=2.32.0",           # sync HTTP — Streamlit → backend calls
+    "sseclient-py>=1.8.0",        # parse SSE stream in Streamlit
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.27.0",              # AsyncClient for FastAPI test client
+    "ruff>=0.6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend", "frontend"]
+
+# ── Ruff linter config ────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]   # pycodestyle errors, pyflakes, isort
+ignore = ["E501"]           # line-length handled by formatter
+
+# ── Pytest config ─────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
