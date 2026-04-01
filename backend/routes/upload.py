@@ -209,6 +209,18 @@ async def reindex_document(
     if not paper:
         raise DocumentNotFoundError()
 
+    # arXiv papers fetched with old code have no stored PDF — re-fetch instead
+    if paper.arxiv_id and (not paper.stored_path or not os.path.exists(paper.stored_path)):
+        from backend.crud.uploaded_doc import delete_paper as _delete_paper
+        from backend.services.paper_fetch_service import fetch_paper_by_arxiv_id
+        try:
+            chroma_client.delete_by_document(paper.filename)
+        except Exception:
+            pass
+        await _delete_paper(paper_id)
+        background_tasks.add_task(fetch_paper_by_arxiv_id, paper.arxiv_id)
+        return {"message": "Re-fetching and indexing from arXiv", "paper_id": paper_id}
+
     try:
         chroma_client.delete_by_document(paper.filename)
     except Exception as exc:

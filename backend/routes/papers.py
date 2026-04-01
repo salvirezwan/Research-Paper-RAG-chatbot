@@ -110,8 +110,8 @@ async def delete_paper_endpoint(paper_id: str):
 @router.post("/fetch/arxiv/{arxiv_id}")
 async def fetch_arxiv_paper(arxiv_id: str):
     """
-    Fetch a paper's metadata from arXiv by ID and save it to MongoDB.
-    The paper's abstract is available for immediate RAG querying via live_fetch.
+    Fetch a paper from arXiv by ID: downloads the full PDF, runs the ingestion
+    pipeline, and indexes the content into ChromaDB for RAG querying.
     """
     result = await fetch_paper_by_arxiv_id(arxiv_id)
     if not result:
@@ -120,5 +120,5 @@ async def fetch_arxiv_paper(arxiv_id: str):
             detail=f"Could not fetch paper {arxiv_id} from arXiv",
         )
 
-    logger.info(f"[PAPERS API] Fetched arxiv_id={arxiv_id}")
-    return {"message": "Paper fetched and saved", **result}
+    logger.info(f"[PAPERS API] Fetched and indexed arxiv_id={arxiv_id}")
+    return {"message": "Paper fetched, downloaded, and indexed", **result}
