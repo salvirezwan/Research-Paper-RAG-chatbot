@@ -55,6 +55,10 @@ RUN mkdir -p \
 ENV PYTHONUNBUFFERED=1
 ENV UPLOAD_DIR=/tmp/uploads/documents
 ENV HF_HOME=/home/appuser/.cache/huggingface
+# Set APP_PUBLIC_URL to your HF Space URL so citation links and the PDF viewer work.
+# Example: ENV APP_PUBLIC_URL=https://salvirezwan-research-paper-rag-chatbot.hf.space
+# Leave empty to default to localhost (local dev).
+ENV APP_PUBLIC_URL=""
 
 # HF Spaces exposes a single port
 EXPOSE 7860

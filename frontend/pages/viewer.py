@@ -6,6 +6,7 @@ URL query params:
   ?page=<int>       — optional, scroll to this 1-based page number
 """
 import json
+import os
 import traceback
 from urllib.parse import unquote
 
@@ -13,7 +14,14 @@ import requests
 import streamlit as st
 import streamlit.components.v1 as components
 
-BACKEND_URL = "http://localhost:8000"
+# Internal backend URL (server-side Python requests — always localhost inside the container)
+BACKEND_URL = os.environ.get("INTERNAL_BACKEND_URL", "http://localhost:8000")
+
+# Public-facing base URL used by the browser (PDF.js fetches the PDF client-side)
+# In HF Spaces: set APP_PUBLIC_URL=https://<space-name>.hf.space
+# Locally: defaults to http://localhost:8000 (direct backend, or same as BACKEND_URL)
+_app_public_url = os.environ.get("APP_PUBLIC_URL", "").rstrip("/")
+PUBLIC_BACKEND_URL = _app_public_url if _app_public_url else BACKEND_URL
 
 st.set_page_config(page_title="Document Viewer", layout="wide")
 
@@ -116,7 +124,10 @@ if not paper_id:
 
     st.stop()
 
-pdf_url = f"{BACKEND_URL}/api/v1/uploads/{paper_id}/view"
+# Used for server-side fetching (Python) — always internal
+pdf_url_internal = f"{BACKEND_URL}/api/v1/uploads/{paper_id}/view"
+# Used by PDF.js in the browser — must be publicly reachable
+pdf_url = f"{PUBLIC_BACKEND_URL}/api/v1/uploads/{paper_id}/view"
 
 # Build JS search terms from section_id if no explicit page given
 search_terms_js = "[]"
@@ -131,7 +142,7 @@ target_page_js = json.dumps(page_number)
 
 try:
     with st.spinner("Loading document…"):
-        resp = requests.get(pdf_url, stream=True, timeout=15)
+        resp = requests.get(pdf_url_internal, stream=True, timeout=15)
 
     if resp.status_code == 404:
         st.error("❌ Document not found. It may have been deleted.")

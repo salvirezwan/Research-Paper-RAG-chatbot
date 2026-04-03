@@ -3,6 +3,7 @@ Generator node: build a context-augmented prompt from retrieved chunks,
 call Groq LLM, and produce a cited research answer.
 """
 
+import os
 from typing import List, Dict, Any
 from urllib.parse import quote
 
@@ -13,7 +14,10 @@ from backend.rag.llm_client import get_chat_model
 from backend.core.config import settings
 from backend.core.logging import logger
 
-_VIEWER_BASE = f"http://localhost:{settings.STREAMLIT_PORT}/viewer"
+# In HF Spaces set APP_PUBLIC_URL=https://<space-name>.hf.space
+# Locally defaults to http://localhost:<streamlit_port>
+_app_public_url = os.environ.get("APP_PUBLIC_URL", "").rstrip("/")
+_VIEWER_BASE = f"{_app_public_url}/viewer" if _app_public_url else f"http://localhost:{settings.STREAMLIT_PORT}/viewer"
 
 _SYSTEM_PROMPT = """You are an expert academic research assistant.
 
