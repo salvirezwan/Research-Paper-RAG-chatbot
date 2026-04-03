@@ -27,11 +27,14 @@ async def fetch_paper_by_arxiv_id(arxiv_id: str, session_id: Optional[str] = Non
     Fetch paper metadata from arXiv, download the full PDF, and index it.
     Returns the paper metadata dict, or None on failure.
     """
-    # Return existing record if already saved
+    # Return existing record only if it belongs to this session
     existing = await get_paper_by_arxiv_id(arxiv_id)
     if existing:
-        logger.info(f"[PAPER_FETCH] arxiv_id={arxiv_id} already in DB")
-        return _paper_to_dict(existing)
+        if existing.session_id == session_id:
+            logger.info(f"[PAPER_FETCH] arxiv_id={arxiv_id} already in DB for this session")
+            return _paper_to_dict(existing)
+        # Paper exists but under a different session — fall through to create a new record
+        logger.info(f"[PAPER_FETCH] arxiv_id={arxiv_id} exists under different session; creating new record for session={session_id}")
 
     async with httpx.AsyncClient(follow_redirects=True) as client:
         # ── 1. Fetch metadata ─────────────────────────────────────────────────

@@ -25,6 +25,12 @@ PUBLIC_BACKEND_URL = _app_public_url if _app_public_url else BACKEND_URL
 
 st.set_page_config(page_title="Document Viewer", layout="wide")
 
+# ── Session ID (shared with main app via st.session_state) ────────────────────
+import uuid
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+SESSION_ID = st.session_state.session_id
+
 # ── Query params ───────────────────────────────────────────────────────────────
 query_params = st.query_params
 
@@ -57,7 +63,11 @@ if not paper_id:
     st.info("Select a paper below to view its PDF, or use a citation link from the chat.")
 
     try:
-        papers_resp = requests.get(f"{BACKEND_URL}/api/v1/papers", timeout=10)
+        papers_resp = requests.get(
+            f"{BACKEND_URL}/api/v1/papers",
+            params={"session_id": SESSION_ID},
+            timeout=10,
+        )
         if papers_resp.status_code == 200:
             papers = papers_resp.json().get("papers", [])
         else:

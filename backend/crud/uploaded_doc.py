@@ -75,14 +75,18 @@ async def get_paper_by_id(paper_id: str) -> Optional[ResearchPaper]:
         return None
 
 
-async def get_paper_by_hash(file_hash: str) -> Optional[ResearchPaper]:
+async def get_paper_by_hash(file_hash: str, session_id: Optional[str] = None) -> Optional[ResearchPaper]:
     database = get_database()
     if database is None:
         raise RuntimeError("Database not initialized")
 
     collection = database["research_papers"]
 
-    doc = await collection.find_one({"file_hash": file_hash})
+    query: Dict[str, Any] = {"file_hash": file_hash}
+    if session_id:
+        query["session_id"] = session_id
+
+    doc = await collection.find_one(query)
     if doc:
         return ResearchPaper.from_mongo(doc)
     return None

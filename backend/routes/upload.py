@@ -58,7 +58,7 @@ async def upload_document(
 
     file_hash = get_file_hash_from_bytes(content)
 
-    existing = await get_paper_by_hash(file_hash)
+    existing = await get_paper_by_hash(file_hash, session_id=session_id)
     if existing:
         if not force_reupload:
             raise DuplicateDocumentError()

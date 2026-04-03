@@ -19,12 +19,18 @@ async def retrieve_node(state: GraphState) -> GraphState:
     upload_ids = None
     if session_id:
         try:
-            upload_ids = await list_paper_ids_by_session(session_id) or None
+            upload_ids = await list_paper_ids_by_session(session_id)
         except Exception as e:
             logger.warning(f"[RETRIEVE] Could not fetch session paper IDs: {e}")
+            upload_ids = []
+
+    # If we have a session_id but no papers, return nothing — don't search all sessions
+    if session_id and upload_ids is not None and len(upload_ids) == 0:
+        logger.info(f"[RETRIEVE] session={session_id} has no indexed papers — returning empty")
+        return {**state, "retrieved_chunks": []}
 
     query_vector = embed_text(query)
-    results = chroma_client.search(query_vector, top_k=_RETRIEVAL_TOP_K, upload_ids=upload_ids)
+    results = chroma_client.search(query_vector, top_k=_RETRIEVAL_TOP_K, upload_ids=upload_ids or None)
 
     retrieved_chunks: List[Dict[str, Any]] = []
 
