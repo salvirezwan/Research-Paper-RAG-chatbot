@@ -6,7 +6,7 @@ call Groq LLM, and produce a cited research answer.
 from typing import List, Dict, Any
 from urllib.parse import quote
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from backend.rag.langgraph.state import GraphState
 from backend.rag.llm_client import get_chat_model
@@ -133,10 +133,17 @@ def generator_node(state: GraphState) -> GraphState:
         "where applicable."
     )
 
-    messages = [
-        SystemMessage(content=_SYSTEM_PROMPT),
-        HumanMessage(content=user_content),
-    ]
+    history = state.get("chat_history") or []
+    history_messages = []
+    for turn in history[-6:]:  # last 3 exchanges (6 messages)
+        role = turn.get("role", "")
+        content = turn.get("content", "")
+        if role == "user":
+            history_messages.append(HumanMessage(content=content))
+        elif role == "assistant":
+            history_messages.append(AIMessage(content=content))
+
+    messages = [SystemMessage(content=_SYSTEM_PROMPT)] + history_messages + [HumanMessage(content=user_content)]
 
     try:
         response = llm.invoke(messages)

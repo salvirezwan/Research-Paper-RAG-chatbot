@@ -3,7 +3,7 @@ LangGraph assembly — wire all nodes into a compiled StateGraph
 and expose synchronous + async-streaming entry points.
 """
 
-from typing import AsyncIterator, Dict, Any
+from typing import AsyncIterator, Dict, Any, List
 
 from langgraph.graph import StateGraph, END
 
@@ -84,10 +84,10 @@ def get_rag_graph():
 # Synchronous execution
 # ---------------------------------------------------------------------------
 
-def run_langgraph_pipeline(query: str, session_id: str = None) -> str:
+def run_langgraph_pipeline(query: str, session_id: str = None, chat_history: List[Dict[str, str]] = None) -> str:
     """Run the full RAG pipeline synchronously and return the final answer."""
     graph = get_rag_graph()
-    initial_state: GraphState = {"user_query": query, "session_id": session_id}
+    initial_state: GraphState = {"user_query": query, "session_id": session_id, "chat_history": chat_history or []}
 
     final_state = graph.invoke(initial_state)
 
@@ -101,13 +101,14 @@ def run_langgraph_pipeline(query: str, session_id: str = None) -> str:
 async def stream_langgraph_pipeline(
     query: str,
     session_id: str = None,
+    chat_history: List[Dict[str, str]] = None,
 ) -> AsyncIterator[Dict[str, Any]]:
     """
     Stream the RAG pipeline asynchronously, yielding SSE-style events
     for each node transition and the final answer.
     """
     graph = get_rag_graph()
-    initial_state: GraphState = {"user_query": query, "session_id": session_id}
+    initial_state: GraphState = {"user_query": query, "session_id": session_id, "chat_history": chat_history or []}
 
     async for event in graph.astream(initial_state):
         for node_name, node_state in event.items():

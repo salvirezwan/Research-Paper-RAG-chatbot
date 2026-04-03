@@ -10,9 +10,9 @@ from backend.services.chat_service import stream_chat
 router = APIRouter(prefix="/api/v1", tags=["Chat"])
 
 
-async def _sse_generator(query: str, session_id=None) -> AsyncIterator[str]:
+async def _sse_generator(query: str, session_id=None, chat_history=None) -> AsyncIterator[str]:
     try:
-        async for event in stream_chat(query, session_id=session_id):
+        async for event in stream_chat(query, session_id=session_id, chat_history=chat_history):
             event_type = event.get("type", "status")
             data = event.get("data", "")
 
@@ -38,4 +38,4 @@ async def chat_endpoint(request: ChatRequest):
     if not request.query or not request.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    return EventSourceResponse(_sse_generator(request.query.strip(), session_id=request.session_id))
+    return EventSourceResponse(_sse_generator(request.query.strip(), session_id=request.session_id, chat_history=request.chat_history))

@@ -151,9 +151,11 @@ def status_badge_html(status: str) -> str:
 def stream_reply(user_msg: str, status_callback=None):
     """Generator: yields text chunks from the backend SSE chat endpoint."""
     try:
+        # Send last 6 messages (3 exchanges) as history, excluding the current message
+        history = st.session_state.messages[-6:] if st.session_state.messages else []
         response = requests.post(
             f"{BACKEND_URL}/api/v1/chat",
-            json={"query": user_msg, "session_id": st.session_state.session_id},
+            json={"query": user_msg, "session_id": st.session_state.session_id, "chat_history": history},
             headers={"Content-Type": "application/json"},
             stream=True,
             timeout=120,
