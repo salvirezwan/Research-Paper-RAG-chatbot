@@ -33,46 +33,47 @@ async def fetch_paper_by_arxiv_id(arxiv_id: str, session_id: Optional[str] = Non
         logger.info(f"[PAPER_FETCH] arxiv_id={arxiv_id} already in DB")
         return _paper_to_dict(existing)
 
-    # ── 1. Fetch metadata ─────────────────────────────────────────────────────
-    try:
-        resp = httpx.get(_ARXIV_API, params={"id_list": arxiv_id, "max_results": 1}, timeout=30.0)
-        resp.raise_for_status()
-    except httpx.HTTPError as exc:
-        logger.error(f"[PAPER_FETCH] arXiv metadata request failed for {arxiv_id}: {exc}")
-        return None
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        # ── 1. Fetch metadata ─────────────────────────────────────────────────
+        try:
+            resp = await client.get(_ARXIV_API, params={"id_list": arxiv_id, "max_results": 1}, timeout=30.0)
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            logger.error(f"[PAPER_FETCH] arXiv metadata request failed for {arxiv_id}: {exc}")
+            return None
 
-    try:
-        root = ET.fromstring(resp.text)
-    except ET.ParseError as exc:
-        logger.error(f"[PAPER_FETCH] XML parse error: {exc}")
-        return None
+        try:
+            root = ET.fromstring(resp.text)
+        except ET.ParseError as exc:
+            logger.error(f"[PAPER_FETCH] XML parse error: {exc}")
+            return None
 
-    entry = root.find("atom:entry", _ARXIV_NS)
-    if entry is None:
-        logger.warning(f"[PAPER_FETCH] No entry found for arxiv_id={arxiv_id}")
-        return None
+        entry = root.find("atom:entry", _ARXIV_NS)
+        if entry is None:
+            logger.warning(f"[PAPER_FETCH] No entry found for arxiv_id={arxiv_id}")
+            return None
 
-    title = (entry.findtext("atom:title", "", _ARXIV_NS) or "").strip()
-    summary = (entry.findtext("atom:summary", "", _ARXIV_NS) or "").strip()
-    published = (entry.findtext("atom:published", "", _ARXIV_NS) or "")[:4]
-    authors = [
-        (a.findtext("atom:name", "", _ARXIV_NS) or "").strip()
-        for a in entry.findall("atom:author", _ARXIV_NS)
-    ]
-    categories = [
-        c.attrib.get("term", "")
-        for c in entry.findall("atom:category", _ARXIV_NS)
-    ]
+        title = (entry.findtext("atom:title", "", _ARXIV_NS) or "").strip()
+        summary = (entry.findtext("atom:summary", "", _ARXIV_NS) or "").strip()
+        published = (entry.findtext("atom:published", "", _ARXIV_NS) or "")[:4]
+        authors = [
+            (a.findtext("atom:name", "", _ARXIV_NS) or "").strip()
+            for a in entry.findall("atom:author", _ARXIV_NS)
+        ]
+        categories = [
+            c.attrib.get("term", "")
+            for c in entry.findall("atom:category", _ARXIV_NS)
+        ]
 
-    # ── 2. Download PDF ───────────────────────────────────────────────────────
-    pdf_url = _ARXIV_PDF.format(arxiv_id=arxiv_id)
-    try:
-        pdf_resp = httpx.get(pdf_url, timeout=60.0, follow_redirects=True)
-        pdf_resp.raise_for_status()
-        pdf_bytes = pdf_resp.content
-    except httpx.HTTPError as exc:
-        logger.error(f"[PAPER_FETCH] PDF download failed for {arxiv_id}: {exc}")
-        return None
+        # ── 2. Download PDF ───────────────────────────────────────────────────
+        pdf_url = _ARXIV_PDF.format(arxiv_id=arxiv_id)
+        try:
+            pdf_resp = await client.get(pdf_url, timeout=90.0)
+            pdf_resp.raise_for_status()
+            pdf_bytes = pdf_resp.content
+        except httpx.HTTPError as exc:
+            logger.error(f"[PAPER_FETCH] PDF download failed for {arxiv_id}: {exc}")
+            return None
 
     # ── 3. Save PDF to disk ───────────────────────────────────────────────────
     filename = f"{arxiv_id}.pdf"
