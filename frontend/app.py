@@ -254,11 +254,33 @@ with st.sidebar:
                             force=force_input,
                         )
                         if code == 200:
-                            st.success(
-                                f"✅ Uploaded! Processing in background.\n\n"
-                                f"**ID:** `{result.get('paper_id', '')}`"
-                            )
-                            st.session_state.papers_refresh += 1
+                            paper_id = result.get("paper_id", "")
+                            status_box = st.info("⏳ Indexing paper, please wait…")
+                            # Poll until indexed or failed (max ~60s)
+                            for _ in range(30):
+                                time.sleep(2)
+                                try:
+                                    s = requests.get(
+                                        f"{BACKEND_URL}/api/v1/upload/{paper_id}",
+                                        timeout=10,
+                                    ).json()
+                                    ps = s.get("status", "")
+                                    if ps == "indexed":
+                                        chunks = s.get("chunk_count") or 0
+                                        title = s.get("filename", paper_id)
+                                        status_box.success(
+                                            f"✅ **{title}** is ready — {chunks} chunks indexed and searchable."
+                                        )
+                                        st.session_state.papers_refresh += 1
+                                        break
+                                    elif ps == "failed":
+                                        err = s.get("error_message", "Unknown error")
+                                        status_box.error(f"❌ Indexing failed: {err}")
+                                        break
+                                except Exception:
+                                    pass
+                            else:
+                                status_box.warning("⚠️ Still processing — check the Papers Library in a moment.")
                         elif code == 409:
                             st.error(
                                 "Duplicate — already indexed. "
