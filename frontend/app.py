@@ -110,7 +110,7 @@ def fetch_arxiv_paper(arxiv_id: str) -> tuple:
     resp = requests.post(
         f"{BACKEND_URL}/api/v1/papers/fetch/arxiv/{arxiv_id.strip()}",
         params={"session_id": st.session_state.session_id},
-        timeout=30,
+        timeout=120,
     )
     return resp.json(), resp.status_code
 

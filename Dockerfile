@@ -38,7 +38,8 @@ COPY supervisord.conf ./supervisord.conf
 
 # Pre-create runtime dirs under /tmp (writable by non-root)
 RUN mkdir -p \
-    /tmp/uploads/documents \
+    /tmp/uploads/documents/upload \
+    /tmp/uploads/documents/arxiv \
     /tmp/uploads/arxiv \
     /tmp/nginx_client_body \
     /tmp/nginx_proxy \
