@@ -1,12 +1,12 @@
-from typing import AsyncIterator, Dict, Any
+from typing import AsyncIterator, Dict, Any, Optional
 
 from backend.rag.langgraph.graph import run_langgraph_pipeline, stream_langgraph_pipeline
 
 
-def process_chat(query: str) -> Dict[str, Any]:
+def process_chat(query: str, session_id: Optional[str] = None) -> Dict[str, Any]:
     """Run the RAG pipeline synchronously and return the final answer."""
     try:
-        final_answer = run_langgraph_pipeline(query)
+        final_answer = run_langgraph_pipeline(query, session_id=session_id)
         return {
             "query": query,
             "answer": final_answer,
@@ -20,10 +20,10 @@ def process_chat(query: str) -> Dict[str, Any]:
         }
 
 
-async def stream_chat(query: str) -> AsyncIterator[Dict[str, Any]]:
+async def stream_chat(query: str, session_id: Optional[str] = None) -> AsyncIterator[Dict[str, Any]]:
     """Stream RAG pipeline events for SSE delivery."""
     try:
-        async for event in stream_langgraph_pipeline(query):
+        async for event in stream_langgraph_pipeline(query, session_id=session_id):
             yield event
     except Exception as e:
         yield {

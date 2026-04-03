@@ -45,6 +45,7 @@ async def upload_document(
     file: UploadFile = File(..., description="Research paper PDF"),
     metadata: Optional[str] = Form(None, description='Optional JSON: {"title": "...", "authors": "..."}'),
     force_reupload: bool = Form(False),
+    session_id: Optional[str] = Form(None),
     background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     if not file.content_type or file.content_type not in settings.ALLOWED_FILE_TYPES:
@@ -95,6 +96,7 @@ async def upload_document(
         title=title,
         authors=[a.strip() for a in authors.split(",")] if authors else None,
         publication_year=publication_year,
+        session_id=session_id,
     )
 
     paper_id = str(paper.id)

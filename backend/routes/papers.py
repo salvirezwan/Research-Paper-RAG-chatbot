@@ -24,17 +24,30 @@ async def list_papers_endpoint(
     source: Optional[PaperSource] = Query(None),
     status: Optional[PaperStatus] = Query(None),
     publication_year: Optional[str] = Query(None),
+    session_id: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
-    papers = await list_papers(
-        source=source,
-        status=status,
-        publication_year=publication_year,
-        limit=limit,
-        offset=offset,
-    )
-    total = await count_papers(source=source, status=status)
+    from backend.crud.uploaded_doc import list_paper_ids_by_session
+    if session_id:
+        papers = await list_papers(
+            source=source,
+            status=status,
+            publication_year=publication_year,
+            limit=limit,
+            offset=offset,
+            session_id=session_id,
+        )
+        total = len(papers)
+    else:
+        papers = await list_papers(
+            source=source,
+            status=status,
+            publication_year=publication_year,
+            limit=limit,
+            offset=offset,
+        )
+        total = await count_papers(source=source, status=status)
 
     return {
         "papers": [
@@ -108,12 +121,12 @@ async def delete_paper_endpoint(paper_id: str):
 
 
 @router.post("/fetch/arxiv/{arxiv_id}")
-async def fetch_arxiv_paper(arxiv_id: str):
+async def fetch_arxiv_paper(arxiv_id: str, session_id: Optional[str] = None):
     """
     Fetch a paper from arXiv by ID: downloads the full PDF, runs the ingestion
     pipeline, and indexes the content into ChromaDB for RAG querying.
     """
-    result = await fetch_paper_by_arxiv_id(arxiv_id)
+    result = await fetch_paper_by_arxiv_id(arxiv_id, session_id=session_id)
     if not result:
         raise HTTPException(
             status_code=502,

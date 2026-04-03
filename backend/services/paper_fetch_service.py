@@ -22,7 +22,7 @@ _ARXIV_PDF = "https://arxiv.org/pdf/{arxiv_id}"
 _ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
 
 
-async def fetch_paper_by_arxiv_id(arxiv_id: str) -> Optional[Dict[str, Any]]:
+async def fetch_paper_by_arxiv_id(arxiv_id: str, session_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """
     Fetch paper metadata from arXiv, download the full PDF, and index it.
     Returns the paper metadata dict, or None on failure.
@@ -92,6 +92,7 @@ async def fetch_paper_by_arxiv_id(arxiv_id: str) -> Optional[Dict[str, Any]]:
         publication_year=published,
         arxiv_id=arxiv_id,
         subject_areas=categories,
+        session_id=session_id,
     )
     paper_id = str(paper.id)
     logger.info(f"[PAPER_FETCH] Saved arxiv_id={arxiv_id} to MongoDB (ID={paper_id}), starting ingestion")

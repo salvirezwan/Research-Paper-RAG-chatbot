@@ -70,6 +70,7 @@ class ResearchPaper(BaseModel):
     chunk_count: int = 0
     error_message: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    session_id: Optional[str] = None
 
     class Config:
         populate_by_name = True

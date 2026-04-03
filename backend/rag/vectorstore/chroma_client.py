@@ -12,8 +12,7 @@ from backend.core.logging import logger
 
 class ChromaClient:
     def __init__(self):
-        self.client = chromadb.PersistentClient(
-            path=settings.CHROMA_PERSIST_PATH,
+        self.client = chromadb.EphemeralClient(
             settings=ChromaSettings(anonymized_telemetry=False)
         )
         self.collection_name = settings.CHROMA_COLLECTION_NAME
@@ -165,6 +164,7 @@ class ChromaClient:
         source: Optional[str] = None,
         publication_year: Optional[str] = None,
         upload_id: Optional[str] = None,
+        upload_ids: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
         try:
             where = {}
@@ -172,7 +172,11 @@ class ChromaClient:
                 where["source"] = {"$eq": source}
             if publication_year:
                 where["publication_year"] = {"$eq": publication_year}
-            if upload_id:
+            if upload_ids and len(upload_ids) == 1:
+                where["upload_id"] = {"$eq": upload_ids[0]}
+            elif upload_ids:
+                where["upload_id"] = {"$in": upload_ids}
+            elif upload_id:
                 where["upload_id"] = {"$eq": upload_id}
 
             query_kwargs: dict = {

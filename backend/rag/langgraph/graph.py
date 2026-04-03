@@ -84,10 +84,10 @@ def get_rag_graph():
 # Synchronous execution
 # ---------------------------------------------------------------------------
 
-def run_langgraph_pipeline(query: str) -> str:
+def run_langgraph_pipeline(query: str, session_id: str = None) -> str:
     """Run the full RAG pipeline synchronously and return the final answer."""
     graph = get_rag_graph()
-    initial_state: GraphState = {"user_query": query}
+    initial_state: GraphState = {"user_query": query, "session_id": session_id}
 
     final_state = graph.invoke(initial_state)
 
@@ -100,13 +100,14 @@ def run_langgraph_pipeline(query: str) -> str:
 
 async def stream_langgraph_pipeline(
     query: str,
+    session_id: str = None,
 ) -> AsyncIterator[Dict[str, Any]]:
     """
     Stream the RAG pipeline asynchronously, yielding SSE-style events
     for each node transition and the final answer.
     """
     graph = get_rag_graph()
-    initial_state: GraphState = {"user_query": query}
+    initial_state: GraphState = {"user_query": query, "session_id": session_id}
 
     async for event in graph.astream(initial_state):
         for node_name, node_state in event.items():

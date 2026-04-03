@@ -1,11 +1,13 @@
 import json
+import os
 import time
+import uuid
 
 import requests
 import sseclient
 import streamlit as st
 
-BACKEND_URL = "http://localhost:8000"
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000")
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -52,6 +54,8 @@ st.markdown(
 )
 
 # ── Session state ──────────────────────────────────────────────────────────────
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "papers_refresh" not in st.session_state:
@@ -62,7 +66,11 @@ if "papers_refresh" not in st.session_state:
 
 def fetch_papers() -> list:
     try:
-        resp = requests.get(f"{BACKEND_URL}/api/v1/papers", timeout=10)
+        resp = requests.get(
+            f"{BACKEND_URL}/api/v1/papers",
+            params={"session_id": st.session_state.session_id},
+            timeout=10,
+        )
         if resp.status_code == 200:
             return resp.json().get("papers", [])
     except Exception:
@@ -90,6 +98,7 @@ def upload_paper(
     data = {
         "force_reupload": str(force).lower(),
         "metadata": json.dumps(meta) if meta else "",
+        "session_id": st.session_state.session_id,
     }
     resp = requests.post(
         f"{BACKEND_URL}/api/v1/upload", files=files, data=data, timeout=60
@@ -99,7 +108,9 @@ def upload_paper(
 
 def fetch_arxiv_paper(arxiv_id: str) -> tuple:
     resp = requests.post(
-        f"{BACKEND_URL}/api/v1/papers/fetch/arxiv/{arxiv_id.strip()}", timeout=30
+        f"{BACKEND_URL}/api/v1/papers/fetch/arxiv/{arxiv_id.strip()}",
+        params={"session_id": st.session_state.session_id},
+        timeout=30,
     )
     return resp.json(), resp.status_code
 
@@ -142,7 +153,7 @@ def stream_reply(user_msg: str, status_callback=None):
     try:
         response = requests.post(
             f"{BACKEND_URL}/api/v1/chat",
-            json={"query": user_msg},
+            json={"query": user_msg, "session_id": st.session_state.session_id},
             headers={"Content-Type": "application/json"},
             stream=True,
             timeout=120,

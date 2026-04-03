@@ -6,6 +6,7 @@ class GraphState(TypedDict, total=False):
 
     # Input
     user_query: str
+    session_id: Optional[str]
 
     # Routing decision
     route: str  # "retrieve" | "live_fetch"

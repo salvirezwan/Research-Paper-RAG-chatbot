@@ -3,19 +3,28 @@ from typing import List, Dict, Any
 from backend.rag.langgraph.state import GraphState
 from backend.rag.embedding.embedder import embed_text
 from backend.rag.vectorstore.chroma_client import chroma_client
+from backend.crud.uploaded_doc import list_paper_ids_by_session
 from backend.core.logging import logger
 
 _RETRIEVAL_TOP_K = 5
 
 
-def retrieve_node(state: GraphState) -> GraphState:
+async def retrieve_node(state: GraphState) -> GraphState:
     query = state.get("user_query", "")
 
     if not query:
         return {**state, "retrieved_chunks": []}
 
+    session_id = state.get("session_id")
+    upload_ids = None
+    if session_id:
+        try:
+            upload_ids = await list_paper_ids_by_session(session_id) or None
+        except Exception as e:
+            logger.warning(f"[RETRIEVE] Could not fetch session paper IDs: {e}")
+
     query_vector = embed_text(query)
-    results = chroma_client.search(query_vector, top_k=_RETRIEVAL_TOP_K)
+    results = chroma_client.search(query_vector, top_k=_RETRIEVAL_TOP_K, upload_ids=upload_ids)
 
     retrieved_chunks: List[Dict[str, Any]] = []
 

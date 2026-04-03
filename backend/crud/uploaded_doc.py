@@ -21,7 +21,8 @@ async def create_paper_record(
     arxiv_id: Optional[str] = None,
     semantic_scholar_id: Optional[str] = None,
     subject_areas: Optional[List[str]] = None,
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    session_id: Optional[str] = None,
 ) -> ResearchPaper:
     database = get_database()
     if database is None:
@@ -43,7 +44,8 @@ async def create_paper_record(
         arxiv_id=arxiv_id,
         semantic_scholar_id=semantic_scholar_id,
         subject_areas=subject_areas,
-        metadata=metadata
+        metadata=metadata,
+        session_id=session_id,
     )
 
     try:
@@ -181,7 +183,8 @@ async def list_papers(
     status: Optional[PaperStatus] = None,
     publication_year: Optional[str] = None,
     limit: int = 50,
-    offset: int = 0
+    offset: int = 0,
+    session_id: Optional[str] = None,
 ) -> List[ResearchPaper]:
     database = get_database()
     if database is None:
@@ -196,6 +199,8 @@ async def list_papers(
         filter_dict["status"] = status.value
     if publication_year:
         filter_dict["publication_year"] = publication_year
+    if session_id:
+        filter_dict["session_id"] = session_id
 
     try:
         cursor = collection.find(filter_dict).sort("uploaded_at", -1).skip(offset).limit(limit)
@@ -221,6 +226,20 @@ async def delete_paper(paper_id: str) -> bool:
     except Exception as e:
         logger.error(f"Error deleting paper {paper_id}: {e}")
         return False
+
+
+async def list_paper_ids_by_session(session_id: str) -> List[str]:
+    """Return all paper_ids belonging to a session."""
+    database = get_database()
+    if database is None:
+        return []
+    collection = database["research_papers"]
+    try:
+        cursor = collection.find({"session_id": session_id}, {"_id": 1})
+        return [str(doc["_id"]) async for doc in cursor]
+    except Exception as e:
+        logger.error(f"Error listing papers for session {session_id}: {e}")
+        return []
 
 
 async def count_papers(
