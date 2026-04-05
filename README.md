@@ -1,3 +1,13 @@
+---
+title: Research Paper RAG Chatbot
+emoji: 🔬
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Research Paper RAG Chatbot
 
 An AI-powered agentic RAG (Retrieval-Augmented Generation) system for students and researchers. Upload research papers or fetch them live from arXiv, then query across them in natural language with cited, context-aware responses — streamed in real time.
