@@ -1,16 +1,6 @@
----
-title: Research Paper RAG Chatbot
-emoji: 🔬
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # Research Paper RAG Chatbot
 
-An AI-powered agentic RAG (Retrieval-Augmented Generation) system for students and researchers. Upload research papers or fetch them live from arXiv and Semantic Scholar, then query across them in natural language with cited, context-aware responses — streamed in real time.
+An AI-powered agentic RAG (Retrieval-Augmented Generation) system for students and researchers. Upload research papers or fetch them live from arXiv, then query across them in natural language with cited, context-aware responses — streamed in real time.
 
 **Live Demo:** [Hugging Face Spaces](https://huggingface.co/spaces/salvirezwan/Research-Paper-RAG-chatbot)
 
@@ -214,8 +204,3 @@ Since HF Spaces has no persistent disk, the app uses:
 | Deployment | Docker, nginx, supervisord, Hugging Face Spaces |
 | Paper Sources | arXiv API |
 
----
-
-## License
-
-MIT
