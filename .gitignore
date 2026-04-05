@@ -34,3 +34,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Docs
+Project Walkthrough_ Academic Research RAG.docx
